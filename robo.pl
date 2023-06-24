@@ -84,3 +84,5 @@ imprime_elementos([Elemento | Corpo]) :-
     write(Elemento),
     write(' '),
     imprime_elementos(Corpo).
+
+%Exemplo de entrada por enquanto : inicia_sala(Matriz, 5, 5,Sala).
