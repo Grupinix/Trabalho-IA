@@ -40,6 +40,17 @@ limpa_posicao_antiga(Sala, XAntigo, YAntigo, NovaSala):-
     replace(YAntigo, Linha, 'l', NovaLinha), 
     replace(XAntigo, Sala, NovaLinha, NovaSala). 
 
+posicao_valida(Sala, NovoX, NovoY, Resposta) :-
+    length(Sala, Linhas),
+    nth0(0, Sala, PrimeiraLinha),
+    length(PrimeiraLinha, Colunas),
+    ( NovoX > Linhas -> Resposta = false ;
+    NovoX < 0 -> Resposta = false ;
+    NovoY > Colunas -> Resposta = false ;
+    NovoY < 0 -> Resposta = false ;
+    Resposta = true).
+
+
 d(Sala, XAtual, YAtual, NovaSala):- %Direita
     limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
     NovoY is YAtual+1,
