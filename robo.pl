@@ -8,9 +8,7 @@ custo('l',1).
 custo('s',2).
 custo('o',-1).
 
-
 obstaculo('o').
-
 
 inicia_sala(Matriz, Linhas, Colunas,Sala) :-
     length(Matriz, Linhas),
@@ -140,74 +138,100 @@ calcula_custo_dt(X,Y,Sala,Custo):-
 
 
 %----------------------------------- Algorítmos e Heurísticas----------------
-objetivo(Estado,Sala) :-
+objetivo(Sala,Estado) :-
     nth0(0, Estado, X),
     nth0(1, Estado, Y),
     nth0(X, Sala, Linha),
     nth0(Y, Linha, Elemento),
     Elemento == 'f'.
 
-expandir(Sala,Posicao,Sucessores,NovosSucessores):-
-    expandir_d(Sala,Posicao,Sucessores,NovosSucessores).
+expandir_profundidade(Sala,Posicao,Sucessor):-
+    expandir_d(Sala,Posicao,Sucessor);
+    expandir_e(Sala,Posicao,Sucessor);
+    expandir_f(Sala,Posicao,Sucessor);
+    expandir_t(Sala,Posicao,Sucessor);
+    expandir_df(Sala,Posicao,Sucessor);
+    expandir_dt(Sala,Posicao,Sucessor).
 
-expandir_d(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_largura(Sala,Posicao,NovosSucessores,Sucessores):-
+    expandir_d(Sala,Posicao,SucessorD),
+    expandir_e(Sala,Posicao,SucessorE),
+    expandir_f(Sala,Posicao,SucessorF),
+    expandir_t(Sala,Posicao,SucessorT),
+    expandir_df(Sala,Posicao,SucessorDF),
+    expandir_dt(Sala,Posicao,SucessorDT),
+    valida_sucessor(Sucessores,SucessorD,Sucessores1),
+    valida_sucessor(Sucessores1,SucessorE,Sucessores2),
+    valida_sucessor(Sucessores2, SucessorF,Sucessores3),
+    valida_sucessor(Sucessores3, SucessorT, Sucessores4),
+    valida_sucessor(Sucessores4, SucessorDF, Sucessores5),
+    valida_sucessor(Sucessores5, SucessorDT, NovosSucessores).
+
+valida_sucessor(Sucessores,Sucessor,NovosSucessores):-
+   Sucessor \= false,
+    append([Sucessor], Sucessores, NovosSucessores).
+
+valida_sucessor(Sucessores,Sucessor,NovosSucessores):-
+   Sucessor == false,
+   NovosSucessores = Sucessores.
+    
+
+expandir_d(Sala, [X, Y], Sucessor) :-
     (NovoY is Y+1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    concat(Sucessores, [X, NovoY], Sucessores1),
-    expandir_e(Sala, [X, Y], Sucessores1, NovosSucessores).
-expandir_d(Sala, [X, Y], Sucessores, NovosSucessores) :-
-    expandir_e(Sala, [X, Y], Sucessores, NovosSucessores).
+    Sucessor = [X, NovoY].
+expandir_d(_, _, false).
 
-expandir_e(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_e(Sala, [X, Y], Sucessor) :-
     (NovoY is Y-1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    concat(Sucessores, [X, NovoY], Sucessores1),
-    expandir_f(Sala, [X, Y], Sucessores1, NovosSucessores).
-expandir_e(Sala, [X, Y], Sucessores, NovosSucessores) :-
-    expandir_f(Sala, [X, Y], Sucessores, NovosSucessores).
+    Sucessor = [X, NovoY].
+expandir_e(_, _, false).
 
-expandir_f(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_f(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-    concat(Sucessores, [NovoX, Y], Sucessores1),
-    expandir_t(Sala, [X, Y], Sucessores1, NovosSucessores).
-expandir_f(Sala, [X, Y], Sucessores, NovosSucessores) :-
-    expandir_t(Sala, [X, Y], Sucessores, NovosSucessores).
+    Sucessor = [NovoX, Y].
+expandir_f(_, _, false).
 
-expandir_t(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_t(Sala, [X, Y], Sucessor) :-
     (NovoX is X-1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-    concat(Sucessores, [NovoX, Y], Sucessores1),
-	expandir_df(Sala, [X, Y], Sucessores1, NovosSucessores).
-expandir_t(Sala, [X, Y], Sucessores, NovosSucessores) :-
-    expandir_df(Sala, [X, Y], Sucessores, NovosSucessores).
+     Sucessor = [NovoX, Y].
+expandir_t(_, _, false).
 
-expandir_df(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_df(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-    concat(Sucessores, [NovoX, NovoY], Sucessores1),
-	expandir_dt(Sala, [X, Y], Sucessores1, NovosSucessores).
-expandir_df(Sala, [X, Y], Sucessores, NovosSucessores) :-
-    expandir_dt(Sala, [X, Y], Sucessores, NovosSucessores).
+	Sucessor = [NovoX, NovoY].
+expandir_df(_, _, false).
 
-expandir_dt(Sala, [X, Y], Sucessores, NovosSucessores) :-
+expandir_dt(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-    concat(Sucessores, [NovoX, NovoY], NovosSucessores).
-
-expandir_dt(_,_, Sucessores, Sucessores).
+    Sucessor = [NovoX, NovoY].
+expandir_dt(_, _, false).
 
 concat([], L, [L]).
 concat([X | L1], L2, [X | L3]) :-
     concat(L1, L2, L3).
 %---------------------------- Busca Profundidade--------------------------
-busca_profundidade(Estado, Caminho, Sala) :-
-    busca_profundidade_aux(Estado, [], CaminhoReverso, Sala),
-	reverse(CaminhoReverso,Caminho).
+profundidade(Sala,Caminho, NoCorrente, Solucao):-
+    objetivo(Sala,NoCorrente),                          
+    reverse(Caminho,Solucao).
 
-busca_profundidade_aux(Estado, CaminhoAtual, [Estado | CaminhoAtual],Sala) :-
-    objetivo(Estado,Sala).
+profundidade(Sala,Caminho, NoCorrente, Solucao) :-
+    expandir_profundidade(Sala,NoCorrente, NoNovo),
+     not(member(NoNovo, Caminho)),
+    profundidade(Sala,[NoNovo|Caminho], NoNovo, Solucao). 
 
-busca_profundidade_aux(Estado, CaminhoAtual, Caminho, Sala) :-
-    expandir(Sala, Estado, [], Sucessores),
-    member(Sucessor, Sucessores),
-    \+ member(Sucessor, CaminhoAtual),
-    busca_profundidade_aux(Sucessor, [Sucessor | CaminhoAtual], Caminho,Sala).
-	
+busca_profundidade(Sala,NoInicial,Solucao):-
+    profundidade(Sala,[NoInicial],NoInicial,Solucao).
+    
+%---------------------------- Busca Largura--------------------------
+largura(Sala,[[[X,Y]|Caminho]|_], Solucao) :-
+    objetivo(Sala,[X,Y]),
+    reverse([[X,Y]|Caminho], Solucao).
+
+largura(Sala, [[[X,Y]|_]|CaminhosRestantes], Solucao) :-
+    expandir_largura(Sala, [X,Y], NovosCaminhos,[]),
+    append(CaminhosRestantes, NovosCaminhos, CaminhosAtualizados),
+    largura(Sala, CaminhosAtualizados, Solucao).
+
 %-----------------Imprime a sala-----------------------
 imprime_sala(Sala) :-
     imprime_linhas(Sala).
