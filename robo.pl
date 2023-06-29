@@ -15,8 +15,8 @@ inicia_sala(Linhas, Colunas,Sala,Obstaculos) :-
     inicia_linhas(Matriz, Colunas),
     LinhaFinal is Linhas -1,
     ColunaFinal is Colunas -1,
-    define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,SalaParcial1),
-    move_robo(Matriz, 0, 0, SalaParcial),
+    define_obstaculos(Obstaculos,Linhas,Colunas,Matriz,SalaParcial),
+    substituir_char(SalaParcial,0,0,SalaParcial1,'r'),
     substituir_char(SalaParcial1, LinhaFinal, ColunaFinal, Sala,'f').
 
 inicia_linhas([], _).
@@ -34,8 +34,8 @@ define_obstaculos(0, _, _, SalaParcial, SalaParcial).
 
 define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,Sala):-
     Obstaculos > 0,
-    random(1, Linhas, LinhaEscolhida),
-    random(1,Colunas,ColunaEscolhida),
+    random(0, Linhas, LinhaEscolhida),
+    random(0,Colunas,ColunaEscolhida),
 	substituir_char(SalaParcial, LinhaEscolhida, ColunaEscolhida, SalaParcial1,'o'),
     NovoObstaculo is Obstaculos -1,
     define_obstaculos(NovoObstaculo,Linhas,Colunas,SalaParcial1,Sala).
@@ -53,9 +53,6 @@ substituir_char(Sala, X, Y, NovaSala,Char) :-
 
 %----------------------------Robô--------------------------------------
 % Movimento do robô
-move_robo(Sala, X, Y, NovaSala) :-
-   substituir_char(Sala,X,Y,NovaSala,'r').
-
 limpa_posicao_antiga(Sala, XAntigo, YAntigo, NovaSala):-
     substituir_char(Sala,XAntigo,YAntigo,NovaSala,'l').
 
@@ -75,38 +72,16 @@ posicao_valida(Sala, NovoX, NovoY) :-
     not(NovoY < 0),
     not(obstaculo(Elemento))).
 
+move_robo(Sala, [X,Y], NovaSala):- %Direita
+    vizinho(Sala,[X,Y],[XAntigo,YAntigo]),
+    nth0(XAntigo, Sala, Linha),
+    nth0(YAntigo, Linha, Elemento),
+    Elemento = 'r',
+    limpa_posicao_antiga(Sala,XAntigo,YAntigo,SalaTemporaria),
+    substituir_char(SalaTemporaria,X,Y,NovaSala,'r'),
+    imprime_sala(NovaSala).
+move_robo(Sala, [0,0], Sala).
 
-d(Sala, XAtual, YAtual, NovaSala):- %Direita
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoY is YAtual+1,
-    move_robo(SalaTemporaria, XAtual, NovoY, NovaSala).
-
-e(Sala, XAtual, YAtual, NovaSala):- %Esquerda
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoY is YAtual-1,
-    move_robo(SalaTemporaria, XAtual, NovoY, NovaSala).
-
-f(Sala, XAtual, YAtual, NovaSala):- %Frente
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoX is XAtual+1,
-    move_robo(SalaTemporaria, NovoX, YAtual, NovaSala).
-
-t(Sala, XAtual, YAtual, NovaSala):- %Tras
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoX is XAtual-1,
-    move_robo(SalaTemporaria, NovoX, YAtual, NovaSala).
-
-df(Sala, XAtual, YAtual, NovaSala):- %Diagonal frente
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoX is XAtual+1,
-    NovoY is YAtual+1,
-    move_robo(SalaTemporaria, NovoX, NovoY, NovaSala).
-
-dt(Sala, XAtual, YAtual, NovaSala):- %Diagonal 
-    limpa_posicao_antiga(Sala,XAtual,YAtual,SalaTemporaria),
-    NovoX is XAtual-1,
-    NovoY is YAtual-1,
-    move_robo(SalaTemporaria, NovoX, NovoY, NovaSala).
 %----------------------------------Custos----------------------------------
 verifica_custo(X,Y,Sala,Custo):-
     nth0(X, Sala, Linha),
@@ -177,17 +152,18 @@ concat([], L, [L]).
 concat([X | L1], L2, [X | L3]) :-
     concat(L1, L2, L3).
 %---------------------------- Busca Profundidade--------------------------
-profundidade(Sala,Caminho, NoCorrente, Solucao):-
-    objetivo(Sala,NoCorrente),                          
-    reverse(Caminho,Solucao).
+profundidade(Sala, Caminho, NoCorrente, Solucao) :-
+    objetivo(Sala, NoCorrente),
+    reverse(Caminho, Solucao).
 
-profundidade(Sala,Caminho, NoCorrente, Solucao) :-
-    expandir_profundidade(Sala,NoCorrente, NoNovo),
-     not(member(NoNovo, Caminho)),
-    profundidade(Sala,[NoNovo|Caminho], NoNovo, Solucao). 
+profundidade(Sala, Caminho, NoCorrente, Solucao) :-
+    expandir_profundidade(Sala, NoCorrente, NoNovo),
+    not(member(NoNovo, Caminho)),
+    profundidade(Sala, [NoNovo | Caminho], NoNovo, Solucao).
 
-busca_profundidade(Sala,NoInicial,Solucao):-
-    profundidade(Sala,[NoInicial],NoInicial,Solucao).
+busca_profundidade(Sala, NoInicial, Solucao) :-
+    profundidade(Sala, [NoInicial], NoInicial, Solucao).
+
     
 %---------------------------- Busca Largura--------------------------
 largura(Sala, [[No|Caminho]|_], Solucao) :-
@@ -220,8 +196,10 @@ imprime_elementos([Elemento | Corpo]) :-
 
 busca(Sala,'largura'):-
     write("----------Busca Cega-----------------"),
+    nl,
     write("----------Largura---------------"),
     largura(Sala,[[[0,0]]],SolucaoLargura),
+    imprime_solucao_sala(Sala,SolucaoLargura),
     nl,
     write(SolucaoLargura).
 busca(Sala,'profundidade'):-
@@ -233,9 +211,12 @@ busca(Sala,'profundidade'):-
     busca_profundidade(Sala,[0,0],SolucaoProfundidade),
     write(SolucaoProfundidade),
     nl.
-   
-            
-    
+
+imprime_solucao_sala(_,[]).
+imprime_solucao_sala(Sala,[[X,Y]|Solucao]):-
+    move_robo(Sala,[X,Y],NovaSala),
+    imprime_solucao_sala(NovaSala,Solucao).
+
 inicio(Linhas,Colunas,Sala,Obstaculos,Busca):-
     inicia_sala(Linhas,Colunas,Sala,Obstaculos),
     imprime_sala(Sala),
