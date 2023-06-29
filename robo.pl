@@ -9,14 +9,15 @@ custo('s',2).
 custo('o',-1).
 
 obstaculo('o').
-
-inicia_sala(Matriz, Linhas, Colunas,Sala) :-
+   
+inicia_sala(Linhas, Colunas,Sala,Obstaculos) :-
     length(Matriz, Linhas),
     inicia_linhas(Matriz, Colunas),
-    move_robo(Matriz, 0, 0, SalaParcial),
     LinhaFinal is Linhas -1,
     ColunaFinal is Colunas -1,
-    substituir_char(SalaParcial, LinhaFinal, ColunaFinal, Sala,'f').
+    define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,SalaParcial1),
+    move_robo(Matriz, 0, 0, SalaParcial),
+    substituir_char(SalaParcial1, LinhaFinal, ColunaFinal, Sala,'f').
 
 inicia_linhas([], _).
 inicia_linhas([Linha | Corpo], Colunas) :-
@@ -25,10 +26,19 @@ inicia_linhas([Linha | Corpo], Colunas) :-
     inicia_linhas(Corpo, Colunas).
 
 define_valor(Resultado) :-
-    random(0, 3, Escolha),
+    random(0, 2, Escolha),
     (Escolha = 0 -> Resultado = 'l' ;
-     Escolha = 1 -> Resultado = 's' ;
-     Resultado = 'o').
+     Escolha = 1 -> Resultado = 's').
+
+define_obstaculos(0, _, _, SalaParcial, SalaParcial).
+
+define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,Sala):-
+    Obstaculos > 0,
+    random(1, Linhas, LinhaEscolhida),
+    random(1,Colunas,ColunaEscolhida),
+	substituir_char(SalaParcial, LinhaEscolhida, ColunaEscolhida, SalaParcial1,'o'),
+    NovoObstaculo is Obstaculos -1,
+    define_obstaculos(NovoObstaculo,Linhas,Colunas,SalaParcial1,Sala).
 
 preenche_sala([]).
 preenche_sala([Cabeca | Corpo]) :-
@@ -145,66 +155,63 @@ objetivo(Sala,Estado) :-
     nth0(Y, Linha, Elemento),
     Elemento == 'f'.
 
-expandir_profundidade(Sala,Posicao,Sucessor):-
-    expandir_d(Sala,Posicao,Sucessor);
-    expandir_e(Sala,Posicao,Sucessor);
-    expandir_f(Sala,Posicao,Sucessor);
-    expandir_t(Sala,Posicao,Sucessor);
-    expandir_df(Sala,Posicao,Sucessor);
-    expandir_dt(Sala,Posicao,Sucessor).
 
-expandir_largura(Sala,Posicao,NovosSucessores,Sucessores):-
-    expandir_d(Sala,Posicao,SucessorD),
-    expandir_e(Sala,Posicao,SucessorE),
-    expandir_f(Sala,Posicao,SucessorF),
-    expandir_t(Sala,Posicao,SucessorT),
-    expandir_df(Sala,Posicao,SucessorDF),
-    expandir_dt(Sala,Posicao,SucessorDT),
-    valida_sucessor(Sucessores,SucessorD,Sucessores1),
-    valida_sucessor(Sucessores1,SucessorE,Sucessores2),
-    valida_sucessor(Sucessores2, SucessorF,Sucessores3),
-    valida_sucessor(Sucessores3, SucessorT, Sucessores4),
-    valida_sucessor(Sucessores4, SucessorDF, Sucessores5),
-    valida_sucessor(Sucessores5, SucessorDT, NovosSucessores).
-
-valida_sucessor(Sucessores,Sucessor,NovosSucessores):-
-   Sucessor \= false,
-    append([Sucessor], Sucessores, NovosSucessores).
-
-valida_sucessor(Sucessores,Sucessor,NovosSucessores):-
-   Sucessor == false,
-   NovosSucessores = Sucessores.
-    
-
-expandir_d(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoY is Y+1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
     Sucessor = [X, NovoY].
-expandir_d(_, _, false).
 
-expandir_e(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoY is Y-1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
     Sucessor = [X, NovoY].
-expandir_e(_, _, false).
 
-expandir_f(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
     Sucessor = [NovoX, Y].
-expandir_f(_, _, false).
 
-expandir_t(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoX is X-1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
      Sucessor = [NovoX, Y].
-expandir_t(_, _, false).
 
-expandir_df(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
 	Sucessor = [NovoX, NovoY].
-expandir_df(_, _, false).
 
-expandir_dt(Sala, [X, Y], Sucessor) :-
+expandir_profundidade(Sala, [X, Y], Sucessor) :-
     (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
     Sucessor = [NovoX, NovoY].
-expandir_dt(_, _, false).
+
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoY is Y+1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
+    not(member([X, NovoY],[[X,Y]|Caminho])),
+    append([[X, NovoY]], [[X, Y] | Caminho], NovosSucessores).
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoY is Y-1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
+    not(member([X, NovoY],[[X,Y]|Caminho])),
+    append([[X, NovoY]], [[X, Y] | Caminho], NovosSucessores).
+
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoX is X+1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
+    not(member([NovoX, Y],[[X,Y]|Caminho])),
+    append([[NovoX, Y]], [[X, Y] | Caminho], NovosSucessores).
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoX is X-1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
+    not(member([NovoX, Y],[[X,Y]|Caminho])),
+    append([[NovoX, Y]], [[X, Y] | Caminho], NovosSucessores).
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
+    not(member([NovoX, NovoY],[[X,Y]|Caminho])),
+    append([[NovoX, NovoY]], [[X, Y] | Caminho], NovosSucessores).
+
+expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
+    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
+    not(member([NovoX, NovoY],[[X,Y]|Caminho])),
+    append([[NovoX, NovoY]], [[X, Y] | Caminho], NovosSucessores).
+
 
 concat([], L, [L]).
 concat([X | L1], L2, [X | L3]) :-
@@ -227,10 +234,13 @@ largura(Sala,[[[X,Y]|Caminho]|_], Solucao) :-
     objetivo(Sala,[X,Y]),
     reverse([[X,Y]|Caminho], Solucao).
 
-largura(Sala, [[[X,Y]|_]|CaminhosRestantes], Solucao) :-
-    expandir_largura(Sala, [X,Y], NovosCaminhos,[]),
+largura(Sala, [[No|Caminho]|CaminhosRestantes], Solucao) :-
+    findall(Caminhos,expandir_largura(Sala, [No|Caminho], Caminhos),NovosCaminhos),
     append(CaminhosRestantes, NovosCaminhos, CaminhosAtualizados),
     largura(Sala, CaminhosAtualizados, Solucao).
+
+%---------------------------Hill Climbing-------------------------------
+
 
 %-----------------Imprime a sala-----------------------
 imprime_sala(Sala) :-
@@ -247,5 +257,27 @@ imprime_elementos([Elemento | Corpo]) :-
     write(Elemento),
     write(' '),
     imprime_elementos(Corpo).
+    
+
+busca_cega(Sala):-
+    write("----------Busca Cega-----------------"),
+    nl,
+    write("----------Profundidade---------------"),
+    nl,
+    busca_profundidade(Sala,[0,0],SolucaoProfundidade),
+    write(SolucaoProfundidade),
+    nl,
+    write("----------Largura---------------"),
+    largura(Sala,[[[0,0]]],SolucaoLargura),
+    nl,
+    write(SolucaoLargura).
+   
+            
+    
+inicio(Linhas,Colunas,Sala,Obstaculos):-
+    inicia_sala(Linhas,Colunas,Sala,Obstaculos),
+    imprime_sala(Sala),
+    busca_cega(Sala).
+    
 
 %Exemplo de entrada por enquanto : inicia_sala(Matriz, 5, 5,Sala).
