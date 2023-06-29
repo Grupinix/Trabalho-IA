@@ -1,3 +1,4 @@
+%Otimizar função pra printar matriz
 % Inicia matriz com linhas e colunas definidas pelo usuário, as sujeiras ou obstáculos são adicionados pelo "s" e pelo "o", respectivamente.
 % Eles serão adicionados em situações randômicas, enquanto os lugares limpos são representados por "l".
 %custo
@@ -151,6 +152,11 @@ vizinho(Sala, [X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y-1, posicao_val
 concat([], L, [L]).
 concat([X | L1], L2, [X | L3]) :-
     concat(L1, L2, L3).
+%---------------------------Inicio das Heuristicas----------------------
+distancia_manhattan(Sala,[X,Y], Distancia) :-
+    objetivo(Sala,[XF,YF]),  
+    Distancia is abs(X - XF) + abs(Y - YF).
+
 %---------------------------- Busca Profundidade--------------------------
 profundidade(Sala, Caminho, NoCorrente, Solucao) :-
     objetivo(Sala, NoCorrente),
@@ -174,7 +180,6 @@ largura(Sala, [[No|Caminho]|CaminhosRestantes], Solucao) :-
     expandir_largura(Sala, [No|Caminho], NovosCaminhos),
     append(CaminhosRestantes, NovosCaminhos, CaminhosAtualizados),
     largura(Sala, CaminhosAtualizados, Solucao).
-%---------------------------Hill Climbing-------------------------------
 
 
 %-----------------Imprime a sala-----------------------
