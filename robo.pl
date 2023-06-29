@@ -64,17 +64,16 @@ replace(Indice, Lista, Elemento, NovaLista) :-
     nth0(Indice, NovaLista, Elemento, Temporaria).
 
     
-posicao_valida(Sala, NovoX, NovoY, Resposta) :-
+posicao_valida(Sala, NovoX, NovoY) :-
     length(Sala, Linhas),
     nth0(NovoX, Sala, Linha),
     nth0(NovoY, Linha, Elemento),
     length(Linha, Colunas),
-    ( NovoX >= Linhas -> Resposta = false ;
-    NovoX < 0 -> Resposta = false ;
-    NovoY >= Colunas -> Resposta = false ;
-    NovoY < 0 -> Resposta = false ;
-    obstaculo(Elemento) ->  Resposta = false;
-    Resposta = true).
+    ( not(NovoX >= Linhas),
+    not(NovoX < 0),
+    not(NovoY >= Colunas),
+    not(NovoY < 0),
+    not(obstaculo(Elemento))).
 
 
 d(Sala, XAtual, YAtual, NovaSala):- %Direita
@@ -156,61 +155,22 @@ objetivo(Sala,Estado) :-
     Elemento == 'f'.
 
 
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoY is Y+1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    Sucessor = [X, NovoY].
+expandir_profundidade(Sala, No, NovoNo) :-
+    vizinho(Sala, No, NovoNo).
 
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoY is Y-1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    Sucessor = [X, NovoY].
-
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoX is X+1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-    Sucessor = [NovoX, Y].
-
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoX is X-1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-     Sucessor = [NovoX, Y].
-
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-	Sucessor = [NovoX, NovoY].
-
-expandir_profundidade(Sala, [X, Y], Sucessor) :-
-    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-    Sucessor = [NovoX, NovoY].
+expandir_largura(Sala, [No|Caminho], NovosSucessores) :-
+    findall([NovoNo, No|Caminho], % Adiciona o novo nó no início do caminho
+        (vizinho(Sala, No, NovoNo), not(member(NovoNo, [No|Caminho]))),
+        NovosSucessores).
 
 
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoY is Y+1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    not(member([X, NovoY],[[X,Y]|Caminho])),
-    append([[X, NovoY]], [[X, Y] | Caminho], NovosSucessores).
+vizinho(Sala, [X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(Sala, NovoX, Y).
+vizinho(Sala, [X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(Sala, NovoX, Y).
+vizinho(Sala, [X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(Sala, X, NovoY).
+vizinho(Sala, [X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(Sala, X, NovoY).
+vizinho(Sala, [X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY).
+vizinho(Sala, [X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y-1, posicao_valida(Sala, NovoX, NovoY).
 
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoY is Y-1, posicao_valida(Sala, X, NovoY, Resposta), Resposta=true),
-    not(member([X, NovoY],[[X,Y]|Caminho])),
-    append([[X, NovoY]], [[X, Y] | Caminho], NovosSucessores).
-
-
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoX is X+1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-    not(member([NovoX, Y],[[X,Y]|Caminho])),
-    append([[NovoX, Y]], [[X, Y] | Caminho], NovosSucessores).
-
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoX is X-1, posicao_valida(Sala, NovoX, Y, Resposta), Resposta=true),
-    not(member([NovoX, Y],[[X,Y]|Caminho])),
-    append([[NovoX, Y]], [[X, Y] | Caminho], NovosSucessores).
-
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-    not(member([NovoX, NovoY],[[X,Y]|Caminho])),
-    append([[NovoX, NovoY]], [[X, Y] | Caminho], NovosSucessores).
-
-expandir_largura(Sala, [[X, Y]|Caminho], NovosSucessores) :-
-    (NovoX is X+1, NovoY is Y+1, posicao_valida(Sala, NovoX, NovoY, Resposta), Resposta=true),
-    not(member([NovoX, NovoY],[[X,Y]|Caminho])),
-    append([[NovoX, NovoY]], [[X, Y] | Caminho], NovosSucessores).
 
 
 concat([], L, [L]).
@@ -230,15 +190,14 @@ busca_profundidade(Sala,NoInicial,Solucao):-
     profundidade(Sala,[NoInicial],NoInicial,Solucao).
     
 %---------------------------- Busca Largura--------------------------
-largura(Sala,[[[X,Y]|Caminho]|_], Solucao) :-
-    objetivo(Sala,[X,Y]),
-    reverse([[X,Y]|Caminho], Solucao).
+largura(Sala, [[No|Caminho]|_], Solucao) :-
+    objetivo(Sala,No), % Verifica se o nó atual é o objetivo
+    reverse([No|Caminho], Solucao). % Inverte a solução encontrada e retorna
 
 largura(Sala, [[No|Caminho]|CaminhosRestantes], Solucao) :-
-    findall(Caminhos,expandir_largura(Sala, [No|Caminho], Caminhos),NovosCaminhos),
+    expandir_largura(Sala, [No|Caminho], NovosCaminhos),
     append(CaminhosRestantes, NovosCaminhos, CaminhosAtualizados),
     largura(Sala, CaminhosAtualizados, Solucao).
-
 %---------------------------Hill Climbing-------------------------------
 
 
@@ -259,25 +218,28 @@ imprime_elementos([Elemento | Corpo]) :-
     imprime_elementos(Corpo).
     
 
-busca_cega(Sala):-
+busca(Sala,'largura'):-
+    write("----------Busca Cega-----------------"),
+    write("----------Largura---------------"),
+    largura(Sala,[[[0,0]]],SolucaoLargura),
+    nl,
+    write(SolucaoLargura).
+busca(Sala,'profundidade'):-
+    
     write("----------Busca Cega-----------------"),
     nl,
     write("----------Profundidade---------------"),
     nl,
     busca_profundidade(Sala,[0,0],SolucaoProfundidade),
     write(SolucaoProfundidade),
-    nl,
-    write("----------Largura---------------"),
-    largura(Sala,[[[0,0]]],SolucaoLargura),
-    nl,
-    write(SolucaoLargura).
+    nl.
    
             
     
-inicio(Linhas,Colunas,Sala,Obstaculos):-
+inicio(Linhas,Colunas,Sala,Obstaculos,Busca):-
     inicia_sala(Linhas,Colunas,Sala,Obstaculos),
     imprime_sala(Sala),
-    busca_cega(Sala).
+    busca(Sala,Busca).
     
 
-%Exemplo de entrada por enquanto : inicia_sala(Matriz, 5, 5,Sala).
+%Exemplo de entrada por enquanto : inicio(2,2,Sala,0,'profundidade').
