@@ -7,7 +7,6 @@
 %Obstáculos, 3 custos
 
 obstaculo('o').
-
 :- dynamic sala/1.
 :- dynamic objetivo/1.
 
@@ -85,13 +84,6 @@ move_robo(Sala, [X,Y], NovaSala):- %Direita
     substituir_char(SalaTemporaria,X,Y,NovaSala,'r'),
     imprime_sala(NovaSala).
 move_robo(Sala, [0,0], Sala).
-%-----------------------------------Verificar sujeiras-----------------
-% Função para verificar se um elemento está presente em uma lista
-% Utilizada para verificar se 's' está presente em uma linha da matriz
-
-
-
-
 
     
 
@@ -132,16 +124,16 @@ estendeAvaliacao([_,No|Caminho],NovosCaminhos) :-
 		ValorAvaliacao is Avaliacao),
 		NovosCaminhos
 	).
-estendeEstrela([_,GC,_,No|Caminho],NovosCaminhos):-
-	findall([FNovo,GNovo,HNovo,NovoNo,No|Caminho],
-	      (
-          	  sF(GN,HN,_,No,NovoNo),
-              not(member(NovoNo,[No|Caminho])),
-              GNovo is GC + GN, 
-          	  HNovo is HN, 
-              FNovo is GNovo + HNovo
-          ),
-	      NovosCaminhos).
+
+estendeF([_,_,_,No|Caminho],NovosCaminhos):-
+    findall([FNovo,CustoNovo,AvaliacaoNovo,NovoNo,No|Caminho],
+    (
+    	vizinho(No,NovoNo),
+        custo_avaliacao(CustoNovo,AvaliacaoNovo,Caminho,NovoNo),
+        not(member(NovoNo,[No|Caminho])),
+        FNovo is CustoNovo + AvaliacaoNovo),
+    NovosCaminhos
+   ).
 
 maior([F1|_],[F2|_]):-F1 > F2.
 
@@ -173,6 +165,10 @@ distancia_custo(1, []).
 distancia_custo(X, [_ | Calda]) :-
     distancia_custo(Y, Calda),
     X is Y + 1.
+
+custo_avaliacao(Custo,Avaliacao,Caminho, Estado):-
+    distancia_custo(Custo,Caminho),
+    distancia_manhattan(Estado,Avaliacao).
 
 
 
@@ -236,18 +232,22 @@ branchAndBound([Caminho|Caminhos], Solucao):-
         branchAndBound(CaminhosOrd, Solucao).
 
 %------------------------- A* ---------------------------------------------------
-aEstrela(Sala,[[G,_,_,No|Caminho]|_],Solucao,G):-	 %Gera a solucao se o noh sendo visitado eh um 							 %no objetivo
-	objetivo(No),                                    %O noh gerado no passo anterior eh um noh 							 %objetivo
+%F = custo + avaliacao
+aEstrela([[F,_,_,No|Caminho]|_],[F|Solucao]):-
+    objetivo(No),
     reverse([No|Caminho],Solucao).
 
-aEstrela(Sala,[Caminho|Caminhos], Solucao, G) :-
-	estendeF(Caminho, NovosCaminhos), %Gera novos caminhos
-	concatena(Caminhos,NovosCaminhos,CaminhosTotal),
-	ordenaF(CaminhosTotal,CaminhosTotOrd),
-	aEstrela(CaminhosTotOrd, Solucao, G). 	%Coloca o noh corrente no caminho e continua a recursao
+aEstrela([Caminho|Caminhos], Solucao) :-
+    estendeF(Caminho, NovosCaminhos),
+    write(NovosCaminhos),
+    nl,
+    concat(NovosCaminhos,Caminhos,CaminhosTotal),
+    ordena(CaminhosTotal,CaminhosOrd),
+    aEstrela(CaminhosOrd, Solucao).
 
 
 %-----------------Imprime a sala-----------------------
+    
 imprime_sala(Sala) :-
     imprime_linhas(Sala).
 
@@ -293,3 +293,4 @@ imprime_solucao_sala(Sala,[[X,Y]|Solucao]):-
 %inicia_sala(3,3,Sala,2),hillClimb([[_,[0,0]]],Solucao,Custo).
 %inicia_sala(6,6,Sala,2),bestFirst([[_,[0,0]]],Solucao,Custo).
 %trace,inicia_sala(4,2,Sala,2),branchAndBound([[0,[0,0]]],Solucao).
+%inicia_sala(4,4,Sala,2),aEstrela([[0,0,0,[0,0]]],Solucao).
