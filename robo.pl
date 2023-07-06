@@ -1,11 +1,3 @@
-%Otimizar função pra printar matriz
-% Inicia matriz com linhas e colunas definidas pelo usuário, as sujeiras ou obstáculos são adicionados pelo "s" e pelo "o", respectivamente.
-% Eles serão adicionados em situações randômicas, enquanto os lugares limpos são representados por "l".
-%custo
-%Limpo, 1 custo
-%Sujeira, 2 custos
-%Obstáculos, 3 custos
-
 obstaculo('o').
 
 :- dynamic sala/1.
@@ -27,19 +19,21 @@ inicia_sala(Linhas, Colunas,Sala,Obstaculos) :-
     assertz(sala(Sala)),
     encontrar_todas_sujeiras(Sujeiras),
     assertz(sujeira(Sujeiras)),
-    write(Sala),
     atualiza_sujeira(Sujeiras).
 
 inicia_linhas([], _).
 inicia_linhas([Linha | Corpo], Colunas) :-
     length(Linha, Colunas),
-    preenche_sala(Linha),
+    preenche_sala(Linha,2),
     inicia_linhas(Corpo, Colunas).
 
-define_valor(Resultado) :-
+define_valor(Resultado,Limite) :-
+    Limite > 0,
     random(0, 2, Escolha),
     (Escolha = 0 -> Resultado = 'l' ;
      Escolha = 1 -> Resultado = 's').
+
+define_valor('l',_).
 
 define_obstaculos(0, _, _, SalaParcial, SalaParcial).
 
@@ -51,11 +45,19 @@ define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,Sala):-
     NovoObstaculo is Obstaculos -1,
     define_obstaculos(NovoObstaculo,Linhas,Colunas,SalaParcial1,Sala).
 
-preenche_sala([]).
-preenche_sala([Cabeca | Corpo]) :-
-    define_valor(Valor),
+define_novo_limite(Valor, LimiteAtual,Novo):-
+    Valor = 's',
+    Novo is LimiteAtual -1.
+
+define_novo_limite(_, LimiteAtual,LimiteAtual).
+
+
+preenche_sala([],_).
+preenche_sala([Cabeca | Corpo],Limite) :-
+    define_valor(Valor,Limite),
+    define_novo_limite(Valor, Limite,Novo),
     Cabeca = Valor,
-    preenche_sala(Corpo).
+    preenche_sala(Corpo,Novo).
 %-----------------------------Define objetivos------------------------
 
 atualiza_sujeira([Cabeca|Corpo]):-
@@ -107,7 +109,6 @@ replace(Indice, Lista, Elemento, NovaLista) :-
     nth0(Indice, Lista, _, Temporaria),
     nth0(Indice, NovaLista, Elemento, Temporaria).
 
-    
 posicao_valida(NovoX, NovoY) :-
     sala(Sala),
     nth0(NovoX, Sala, Linha),
@@ -126,17 +127,8 @@ move_robo(Sala, [X,Y], XAntigo,YAntigo, NovaSala):- %Direita
     limpa_posicao_antiga(Sala,XAntigo,YAntigo,SalaTemporaria),
     substituir_char(SalaTemporaria,X,Y,NovaSala,'r'),
     imprime_sala(NovaSala).
-move_robo(Sala, [0,0], Sala).
 
 %----------------------------------- Algorítmos e Heurísticas----------------
-expandir_profundidade(No, NovoNo) :-
-    vizinho(No, NovoNo).
-
-expandir_largura([No|Caminho], NovosSucessores) :-
-    findall([NovoNo, No|Caminho], % Adiciona o novo nó no início do caminho
-        (vizinho(No, NovoNo), not(member(NovoNo, [No|Caminho]))),
-        NovosSucessores).
-
 
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
@@ -144,6 +136,8 @@ vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
 vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
+vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
+vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
 
 estendeCusto([_,No|Caminho],NovosCaminhos) :-
         findall([CustoNovo,NovoNo,No|Caminho],
@@ -209,31 +203,6 @@ distancia_custo(X, [_ | Calda]) :-
 custo_avaliacao(Custo,Avaliacao,Caminho, Estado):-
     distancia_custo(Custo,Caminho),
     distancia_manhattan(Estado,Avaliacao).
-
-%---------------------------- Busca Profundidade--------------------------
-profundidade(_, Caminho, NoCorrente, Solucao) :-
-    objetivoP(NoCorrente),
-    reverse(Caminho, Solucao).
-
-profundidade(Sala, Caminho, NoCorrente, Solucao) :-
-    expandir_profundidade(NoCorrente, NoNovo),
-    not(member(NoNovo, Caminho)),
-    profundidade(Sala, [NoNovo | Caminho], NoNovo, Solucao).
-
-busca_profundidade(Sala, NoInicial, Solucao) :-
-    profundidade(Sala, [NoInicial], NoInicial, Solucao).
-
-    
-%---------------------------- Busca Largura--------------------------
-largura(_, [[No|Caminho]|_], Solucao) :-
-    objetivoP(No), % Verifica se o nó atual é o objetivo
-    reverse([No|Caminho], Solucao). % Inverte a solução encontrada e retorna
-
-largura(Sala, [[No|Caminho]|CaminhosRestantes], Solucao) :-
-    expandir_largura([No|Caminho], NovosCaminhos),
-    append(CaminhosRestantes, NovosCaminhos, CaminhosAtualizados),
-    largura(Sala, CaminhosAtualizados, Solucao).
-
 
 %---------------------------- Busca Hill Climb--------------------------
 hillClimb([[_,No|Caminho]|_],Solucao,'-') :-
@@ -337,7 +306,6 @@ busca('aEstrela',Inicio):-
     aEstrela([Inicio], Solucao),
     write(Solucao).
 
-
 busca('aEstrela',Inicio):-
     sujeira([_|Corpo]),
     aEstrela([Inicio], Solucao),
@@ -348,50 +316,36 @@ busca('aEstrela',Inicio):-
     atualiza_sujeira(Corpo,CaminhoInvertido),
     busca('aEstrela',ListaParcial2).
 
-
-busca(Sala,'largura'):-
-    write("----------Busca Cega-----------------"),
-    nl,
-    write("----------Largura---------------"),
-    nl,
-    largura(Sala,[[[0,0]]],SolucaoLargura),
-    imprime_solucao_sala(Sala,SolucaoLargura),
-    nl,
-    write(SolucaoLargura).
-busca(Sala,'profundidade'):-
-    
-    write("----------Busca Cega-----------------"),
-    nl,
-    write("----------Profundidade---------------"),
-    nl,
-    busca_profundidade(Sala,[0,0],SolucaoProfundidade),
-    write(SolucaoProfundidade),
-    nl.
-
-
 %-----------------Imprime a sala-----------------------
     
 imprime_sala(Sala) :-
     imprime_linhas(Sala).
 
-imprime_linhas([]).
+imprime_linhas([]):-
+    nl.
 imprime_linhas([Linha | Corpo]) :-
-    imprime_elementos(Linha),
+    write(Linha),
     nl,
     imprime_linhas(Corpo).
 
-imprime_elementos([]).
-imprime_elementos([Elemento | Corpo]) :-
-    write(Elemento),
-    write(' '),
-    imprime_elementos(Corpo).
+
+    
+imprime_solucao(_,[],_).
+imprime_solucao(Sala,Solucao,[XAntigo,YAntigo]):-
+    Solucao = [[NovoXA, NovoYA]|Resto],
+    write('Próximo passo : '),
+    write(NovoXA),
+    write(' , '),
+    write(NovoYA),
+    nl,
+    move_robo(Sala, [NovoXA, NovoYA], XAntigo,YAntigo, NovaSala),
+    imprime_solucao(NovaSala,Resto,[NovoXA,NovoYA]).
+
+    
+    
     
 
-imprime_solucao_sala(_,[]).
-imprime_solucao_sala(Sala,[[X,Y]|Solucao]):-
-    move_robo(Sala,[X,Y],NovaSala),
-    imprime_solucao_sala(NovaSala,Solucao).
-
+    
 
 %inicia_sala(3,3,Sala,2),hillClimb([[_,[0,0]]],Solucao,Custo).
 %inicia_sala(6,6,Sala,2),bestFirst([[_,[0,0]]],Solucao,Custo).
