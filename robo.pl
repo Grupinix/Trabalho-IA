@@ -67,9 +67,7 @@ atualiza_sujeira([Cabeca|Corpo],Caminho) :-
     retractall(sujeira(_)),
     retractall(objetivoP(_)),
     assertz(sujeira([Cabeca|Corpo])),
-    assertz(objetivoP(Cabeca)),
-    objetivoP(X),
-    write(X).
+    assertz(objetivoP(Cabeca)).
 
 atualiza_sujeira([_|Corpo],Caminho) :-
     atualiza_sujeira(Corpo,Caminho).
@@ -292,7 +290,6 @@ busca('hillClimb',Inicio):-
     write(Solucao).
 
 busca('hillClimb',Inicio):-
-    write(Inicio),
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
     hillClimb([Parametro],Solucao,_),
@@ -309,7 +306,6 @@ busca('bestFirst',Inicio):-
     write(Solucao).
 
 busca('bestFirst',Inicio):-
-    write(Inicio),
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
     bestFirst([Parametro],Solucao,_),
@@ -317,6 +313,21 @@ busca('bestFirst',Inicio):-
     atualiza_sujeira(Corpo,CaminhoInvertido),
     busca('bestFirst',CaminhoInvertido).
 
+busca('branchAndBound',Inicio):-
+    objetivoP(X),
+    objetivoF(Y),
+    X = Y,
+    branchAndBound([Inicio],Solucao),
+    write(Solucao).
+
+busca('branchAndBound',Inicio):-
+    sujeira([_|Corpo]),
+    branchAndBound([Inicio],Solucao),
+    Solucao = [CustoParcial | [CaminhoParcial]],
+    reverse(CaminhoParcial,CaminhoInvertido),
+    concat([CustoParcial],CaminhoInvertido,Parametro),
+    atualiza_sujeira(Corpo,CaminhoInvertido),
+    busca('branchAndBound',Parametro).
 
 
 busca('aEstrela',Inicio):-
@@ -337,34 +348,6 @@ busca('aEstrela',Inicio):-
     atualiza_sujeira(Corpo,CaminhoInvertido),
     busca('aEstrela',ListaParcial2).
 
-busca('aEstrela',Inicio):-
-    objetivoP(X),
-    objetivoF(Y),
-    X = Y,
-    aEstrela([Inicio], Solucao),
-    write(Solucao).
-
-
-    
-    
-
-%-----------------Imprime a sala-----------------------
-    
-imprime_sala(Sala) :-
-    imprime_linhas(Sala).
-
-imprime_linhas([]).
-imprime_linhas([Linha | Corpo]) :-
-    imprime_elementos(Linha),
-    nl,
-    imprime_linhas(Corpo).
-
-imprime_elementos([]).
-imprime_elementos([Elemento | Corpo]) :-
-    write(Elemento),
-    write(' '),
-    imprime_elementos(Corpo).
-    
 
 busca(Sala,'largura'):-
     write("----------Busca Cega-----------------"),
@@ -385,6 +368,25 @@ busca(Sala,'profundidade'):-
     write(SolucaoProfundidade),
     nl.
 
+
+%-----------------Imprime a sala-----------------------
+    
+imprime_sala(Sala) :-
+    imprime_linhas(Sala).
+
+imprime_linhas([]).
+imprime_linhas([Linha | Corpo]) :-
+    imprime_elementos(Linha),
+    nl,
+    imprime_linhas(Corpo).
+
+imprime_elementos([]).
+imprime_elementos([Elemento | Corpo]) :-
+    write(Elemento),
+    write(' '),
+    imprime_elementos(Corpo).
+    
+
 imprime_solucao_sala(_,[]).
 imprime_solucao_sala(Sala,[[X,Y]|Solucao]):-
     move_robo(Sala,[X,Y],NovaSala),
@@ -397,3 +399,5 @@ imprime_solucao_sala(Sala,[[X,Y]|Solucao]):-
 %inicia_sala(4,4,Sala,2),aEstrela([[0,0,0,[0,0]]],Solucao).
 %trace,inicia_sala(4,4,Sala,0),busca('aEstrela',[0,0,0,[0,0]]).
 %trace,inicia_sala(3,3,Sala,2),busca('hillClimb',[[0,0]]).
+%trace,inicia_sala(4,4,Sala,3),busca('branchAndBound',[0,[0,0]]).
+%trace,inicia_sala(3,3,Sala,2),busca('bestFirst',[[0,0]]).
