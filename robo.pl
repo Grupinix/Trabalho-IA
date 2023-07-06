@@ -250,71 +250,84 @@ aEstrela([Caminho|Caminhos], Solucao) :-
     aEstrela(CaminhosOrd, Solucao).
 
 %-----------------Busca com sujeira-------------------
-busca('hillClimb',Inicio):-
+busca('hillClimb',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
     concat([0],Inicio,Parametro),
     hillClimb([Parametro],Solucao,_),
-    write(Solucao).
+    write(Solucao),
+    sala(Sala),
+    imprime_solucao(Sala,Solucao,[0,0]).
 
-busca('hillClimb',Inicio):-
+busca('hillClimb',Inicio,Solucao):-
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
-    hillClimb([Parametro],Solucao,_),
-    reverse(Solucao,CaminhoInvertido),
+    hillClimb([Parametro],SolucaoParcial,_),
+    reverse(SolucaoParcial,CaminhoInvertido),
     atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('hillClimb',CaminhoInvertido).
+    busca('hillClimb',CaminhoInvertido,Solucao).
 
-busca('bestFirst',Inicio):-
+busca('bestFirst',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
     concat([0],Inicio,Parametro),
     bestFirst([Parametro],Solucao,_),
-    write(Solucao).
+    write(Solucao),
+    sala(Sala),
+    imprime_solucao(Sala,Solucao,[0,0]).
 
-busca('bestFirst',Inicio):-
+busca('bestFirst',Inicio,Solucao):-
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
-    bestFirst([Parametro],Solucao,_),
-    reverse(Solucao,CaminhoInvertido),
+    bestFirst([Parametro],SolucaoParcial,_),
+    reverse(SolucaoParcial,CaminhoInvertido),
     atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('bestFirst',CaminhoInvertido).
+    busca('bestFirst',CaminhoInvertido,Solucao).
 
-busca('branchAndBound',Inicio):-
+busca('branchAndBound',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
     branchAndBound([Inicio],Solucao),
-    write(Solucao).
+    write(Solucao),
+    Solucao = [_ | [Resto]],
+    write(Resto),
+    sala(Sala),
+    imprime_solucao(Sala,Resto,[0,0]).
 
-busca('branchAndBound',Inicio):-
+busca('branchAndBound',Inicio,Solucao):-
     sujeira([_|Corpo]),
-    branchAndBound([Inicio],Solucao),
-    Solucao = [CustoParcial | [CaminhoParcial]],
+    branchAndBound([Inicio],SolucaoParcial),
+    SolucaoParcial = [CustoParcial | [CaminhoParcial]],
     reverse(CaminhoParcial,CaminhoInvertido),
     concat([CustoParcial],CaminhoInvertido,Parametro),
     atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('branchAndBound',Parametro).
+    busca('branchAndBound',Parametro,Solucao).
 
 
-busca('aEstrela',Inicio):-
+busca('aEstrela',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
     aEstrela([Inicio], Solucao),
-    write(Solucao).
+    write(Solucao),
+    Solucao = [_ | Resto],
+    sala(Sala),
+    imprime_solucao(Sala,Resto,[0,0]).
+    
+    
 
-busca('aEstrela',Inicio):-
+busca('aEstrela',Inicio,Solucao):-
     sujeira([_|Corpo]),
-    aEstrela([Inicio], Solucao),
-    Solucao = [CustoParcial | CaminhoParcial],
+    aEstrela([Inicio], SolucaoParcial),
+    SolucaoParcial = [CustoParcial | CaminhoParcial],
     reverse(CaminhoParcial,CaminhoInvertido),
     ListaParcial1 = [CustoParcial,CustoParcial,0],
     concat(ListaParcial1,CaminhoInvertido,ListaParcial2),
     atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('aEstrela',ListaParcial2).
+    busca('aEstrela',ListaParcial2,Solucao).
 
 %-----------------Imprime a sala-----------------------
     
@@ -333,6 +346,7 @@ imprime_linhas([Linha | Corpo]) :-
 imprime_solucao(_,[],_).
 imprime_solucao(Sala,Solucao,[XAntigo,YAntigo]):-
     Solucao = [[NovoXA, NovoYA]|Resto],
+    nl,
     write('Próximo passo : '),
     write(NovoXA),
     write(' , '),
@@ -351,7 +365,7 @@ imprime_solucao(Sala,Solucao,[XAntigo,YAntigo]):-
 %inicia_sala(6,6,Sala,2),bestFirst([[_,[0,0]]],Solucao,Custo).
 %inicia_sala(4,2,Sala,2),branchAndBound([[0,[0,0]]],Solucao).
 %inicia_sala(4,4,Sala,2),aEstrela([[0,0,0,[0,0]]],Solucao).
-%trace,inicia_sala(4,4,Sala,0),busca('aEstrela',[0,0,0,[0,0]]).
-%trace,inicia_sala(3,3,Sala,2),busca('hillClimb',[[0,0]]).
-%trace,inicia_sala(4,4,Sala,3),busca('branchAndBound',[0,[0,0]]).
-%trace,inicia_sala(3,3,Sala,2),busca('bestFirst',[[0,0]]).
+%trace,inicia_sala(4,4,Sala,0),busca('aEstrela',[0,0,0,[0,0]],Solucao).
+%trace,inicia_sala(3,3,Sala,2),busca('hillClimb',[[0,0]],Solucao).
+%inicia_sala(4,4,Sala,3),busca('branchAndBound',[0,[0,0]],Solucao).
+%trace,inicia_sala(3,3,Sala,2),busca('bestFirst',[[0,0]],Solucao).
