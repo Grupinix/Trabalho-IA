@@ -129,15 +129,14 @@ move_robo(Sala, [X,Y], XAntigo,YAntigo, NovaSala):- %Direita
     imprime_sala(NovaSala).
 
 %----------------------------------- Algorítmos e Heurísticas----------------
-
-vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
-vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
-vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
-vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
+vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
+vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
+vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
+vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
 
 estendeCusto([_,No|Caminho],NovosCaminhos) :-
         findall([CustoNovo,NovoNo,No|Caminho],
@@ -293,7 +292,6 @@ busca('branchAndBound',Inicio,Solucao):-
     branchAndBound([Inicio],Solucao),
     write(Solucao),
     Solucao = [_ | [Resto]],
-    write(Resto),
     sala(Sala),
     imprime_solucao(Sala,Resto,[0,0]).
 
@@ -360,6 +358,7 @@ imprime_solucao(Sala,Solucao,[XAntigo,YAntigo]):-
     
 
     
+
 
 %inicia_sala(3,3,Sala,2),hillClimb([[_,[0,0]]],Solucao,Custo).
 %inicia_sala(6,6,Sala,2),bestFirst([[_,[0,0]]],Solucao,Custo).
