@@ -6,7 +6,8 @@ obstaculo('o').
 
 :- dynamic sujeira/1.
 
-inicia_sala(Linhas, Colunas,Sala,Obstaculos) :-
+
+inicia_sala(Linhas, Colunas,Obstaculos,Sala) :-
     length(Matriz, Linhas),
     inicia_linhas(Matriz, Colunas),
     LinhaFinal is Linhas -1,
@@ -16,24 +17,19 @@ inicia_sala(Linhas, Colunas,Sala,Obstaculos) :-
     define_obstaculos(Obstaculos,Linhas,Colunas,Matriz,SalaParcial),
     substituir_char(SalaParcial,0,0,SalaParcial1,'r'),
     substituir_char(SalaParcial1, LinhaFinal, ColunaFinal, Sala,'f'),
-    assertz(sala(Sala)),
-    encontrar_todas_sujeiras(Sujeiras),
-    assertz(sujeira(Sujeiras)),
-    atualiza_sujeira(Sujeiras).
+    assertz(sala(Sala)).
 
 inicia_linhas([], _).
 inicia_linhas([Linha | Corpo], Colunas) :-
     length(Linha, Colunas),
-    preenche_sala(Linha,2),
+    preenche_sala(Linha),
     inicia_linhas(Corpo, Colunas).
 
-define_valor(Resultado,Limite) :-
-    Limite > 0,
+define_valor(Resultado) :-
     random(0, 2, Escolha),
     (Escolha = 0 -> Resultado = 'l' ;
      Escolha = 1 -> Resultado = 's').
 
-define_valor('l',_).
 
 define_obstaculos(0, _, _, SalaParcial, SalaParcial).
 
@@ -45,24 +41,14 @@ define_obstaculos(Obstaculos,Linhas,Colunas,SalaParcial,Sala):-
     NovoObstaculo is Obstaculos -1,
     define_obstaculos(NovoObstaculo,Linhas,Colunas,SalaParcial1,Sala).
 
-define_novo_limite(Valor, LimiteAtual,Novo):-
-    Valor = 's',
-    Novo is LimiteAtual -1.
 
-define_novo_limite(_, LimiteAtual,LimiteAtual).
-
-
-preenche_sala([],_).
-preenche_sala([Cabeca | Corpo],Limite) :-
-    define_valor(Valor,Limite),
-    define_novo_limite(Valor, Limite,Novo),
+preenche_sala([]).
+preenche_sala([Cabeca | Corpo]) :-
+    define_valor(Valor),
     Cabeca = Valor,
-    preenche_sala(Corpo,Novo).
-%-----------------------------Define objetivos------------------------
+    preenche_sala(Corpo).
 
-atualiza_sujeira([Cabeca|Corpo]):-
-    assertz(sujeira([Cabeca|Corpo])),
-    assertz(objetivoP(Cabeca)).
+%-----------------------------Define objetivos------------------------
 
 atualiza_sujeira([Cabeca|Corpo],Caminho) :-
     not(member(Cabeca, Caminho)),
@@ -137,16 +123,15 @@ vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
 vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
-
+                
 estendeCusto([_,No|Caminho],NovosCaminhos) :-
-        findall([CustoNovo,NovoNo,No|Caminho],
-      (
-        vizinho(No,NovoNo),
-        not(member(NovoNo,[No|Caminho])),
-      	distancia_custo(CustoNovo,[No|Caminho])
-      ),
-      NovosCaminhos
-       ).
+	findall([CustoNovo,NovoNo,No|Caminho],
+	(
+    	vizinho(No,NovoNo),
+		distancia_custo(CustoNovo,[No|Caminho]),
+		not(member(NovoNo,[No|Caminho]))),
+		NovosCaminhos
+	).
 
 estendeAvaliacao([_,No|Caminho],NovosCaminhos) :-
 	findall([ValorAvaliacao,NovoNo,No|Caminho],
@@ -162,11 +147,12 @@ estendeF([_,_,_,No|Caminho],NovosCaminhos):-
     findall([FNovo,CustoNovo,AvaliacaoNovo,NovoNo,No|Caminho],
     (
     	vizinho(No,NovoNo),
-        custo_avaliacao(CustoNovo,AvaliacaoNovo,Caminho,NovoNo),
+        custo_avaliacao(CustoNovo,AvaliacaoNovo,[No|Caminho],NovoNo),
         not(member(NovoNo,[No|Caminho])),
         FNovo is CustoNovo + AvaliacaoNovo),
     NovosCaminhos
-   ).
+   )
+   .
 
 maior([F1|_],[F2|_]):-F1 > F2.
 
@@ -182,12 +168,14 @@ ordena([X|Cauda],ListaOrd):-
 	particionar(X,Cauda,Menor,Maior),
 	ordena(Menor,MenorOrd),
 	ordena(Maior,MaiorOrd),
-	concat(MenorOrd,[X|MaiorOrd],ListaOrd).
+	append(MenorOrd,[X|MaiorOrd],ListaOrd).
 
 
 concat([], L, L).
 concat([X | L1], L2, [X | L3]) :-
     concat(L1, L2, L3).
+
+
 %---------------------------Inicio das Heuristicas----------------------
 distancia_manhattan([X,Y], Distancia) :-
     objetivoP([XF,YF]),  
@@ -206,7 +194,7 @@ custo_avaliacao(Custo,Avaliacao,Caminho, Estado):-
 %---------------------------- Busca Hill Climb--------------------------
 hillClimb([[_,No|Caminho]|_],Solucao,'-') :-
 	objetivoP(No),
-	reverse([No|Caminho],Solucao).
+	Solucao = [No|Caminho].
 
 hillClimb([Caminho|Caminhos], Solucao, Custo) :-
 	estendeAvaliacao(Caminho, NovosCaminhos),
@@ -218,7 +206,7 @@ hillClimb([Caminho|Caminhos], Solucao, Custo) :-
 
 bestFirst([[_,No|Caminho]|_],Solucao, '-'):-
 	objetivoP(No),
-	reverse([No|Caminho],Solucao).
+	Solucao = ([No|Caminho]).
 bestFirst([Caminho|Caminhos], Solucao, Custo):-
 	estendeAvaliacao(Caminho, NovosCaminhos),
     concat(NovosCaminhos, Caminhos, CaminhosTotal),
@@ -228,7 +216,7 @@ bestFirst([Caminho|Caminhos], Solucao, Custo):-
 %------------------ Busca Branch and Bound--------------------------------------
 branchAndBound([[Custo,No|Caminho]|_],[Custo,Solucao]):-
         objetivoP(No),
-        reverse([No|Caminho],Solucao).
+        Solucao = [No|Caminho].
 branchAndBound([Caminho|Caminhos], Solucao):-
         estendeCusto(Caminho, NovosCaminhos),
         concat(NovosCaminhos, Caminhos, CaminhosTotal),
@@ -240,7 +228,7 @@ branchAndBound([Caminho|Caminhos], Solucao):-
 %F = custo + avaliacao
 aEstrela([[F,_,_,No|Caminho]|_],[F|Solucao]):-
     objetivoP(No),
-    reverse([No|Caminho],Solucao).
+    Solucao = [No|Caminho].
 
 aEstrela([Caminho|Caminhos], Solucao) :-
     estendeF(Caminho, NovosCaminhos),
@@ -254,7 +242,8 @@ busca('hillClimb',Inicio,Solucao):-
     objetivoF(Y),
     X = Y,
     concat([0],Inicio,Parametro),
-    hillClimb([Parametro],Solucao,_),
+    hillClimb([Parametro],SolucaoInvertida,_),
+    reverse(SolucaoInvertida,Solucao),
     write(Solucao),
     sala(Sala),
     imprime_solucao(Sala,Solucao,[0,0]).
@@ -263,16 +252,16 @@ busca('hillClimb',Inicio,Solucao):-
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
     hillClimb([Parametro],SolucaoParcial,_),
-    reverse(SolucaoParcial,CaminhoInvertido),
-    atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('hillClimb',CaminhoInvertido,Solucao).
+    atualiza_sujeira(Corpo,SolucaoParcial),
+    busca('hillClimb',SolucaoParcial,Solucao).
 
 busca('bestFirst',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
     concat([0],Inicio,Parametro),
-    bestFirst([Parametro],Solucao,_),
+    bestFirst([Parametro],SolucaoInvertida,_),
+    reverse(SolucaoInvertida,Solucao),
     write(Solucao),
     sala(Sala),
     imprime_solucao(Sala,Solucao,[0,0]).
@@ -281,27 +270,25 @@ busca('bestFirst',Inicio,Solucao):-
     sujeira([_|Corpo]),
     concat([0],Inicio,Parametro),
     bestFirst([Parametro],SolucaoParcial,_),
-    reverse(SolucaoParcial,CaminhoInvertido),
-    atualiza_sujeira(Corpo,CaminhoInvertido),
-    busca('bestFirst',CaminhoInvertido,Solucao).
+    atualiza_sujeira(Corpo,SolucaoParcial),
+    busca('bestFirst',SolucaoParcial,Solucao).
 
 busca('branchAndBound',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
-    branchAndBound([Inicio],Solucao),
-    write(Solucao),
-    Solucao = [_ | [Resto]],
+    branchAndBound([Inicio],SolucaoParcial),
+    SolucaoParcial = [_ | [Resto]],
+    reverse(Resto,Solucao),
     sala(Sala),
-    imprime_solucao(Sala,Resto,[0,0]).
+    imprime_solucao(Sala,Solucao,[0,0]).
 
 busca('branchAndBound',Inicio,Solucao):-
     sujeira([_|Corpo]),
     branchAndBound([Inicio],SolucaoParcial),
     SolucaoParcial = [CustoParcial | [CaminhoParcial]],
-    reverse(CaminhoParcial,CaminhoInvertido),
-    concat([CustoParcial],CaminhoInvertido,Parametro),
-    atualiza_sujeira(Corpo,CaminhoInvertido),
+    concat([CustoParcial],CaminhoParcial,Parametro),
+    atualiza_sujeira(Corpo,CaminhoParcial),
     busca('branchAndBound',Parametro,Solucao).
 
 
@@ -309,22 +296,21 @@ busca('aEstrela',Inicio,Solucao):-
     objetivoP(X),
     objetivoF(Y),
     X = Y,
-    aEstrela([Inicio], Solucao),
-    write(Solucao),
-    Solucao = [_ | Resto],
+    aEstrela([Inicio], Caminho),
+    Caminho = [Custo|Caminhos],
+    reverse(Caminhos,CaminhoPercorrido),  
+    Solucao = [Custo| CaminhoPercorrido],
     sala(Sala),
-    imprime_solucao(Sala,Resto,[0,0]).
+    imprime_solucao(Sala,CaminhoPercorrido,[0,0]).
     
     
-
 busca('aEstrela',Inicio,Solucao):-
     sujeira([_|Corpo]),
     aEstrela([Inicio], SolucaoParcial),
     SolucaoParcial = [CustoParcial | CaminhoParcial],
-    reverse(CaminhoParcial,CaminhoInvertido),
     ListaParcial1 = [CustoParcial,CustoParcial,0],
-    concat(ListaParcial1,CaminhoInvertido,ListaParcial2),
-    atualiza_sujeira(Corpo,CaminhoInvertido),
+    concat(ListaParcial1,CaminhoParcial,ListaParcial2),
+    atualiza_sujeira(Corpo,CaminhoParcial),
     busca('aEstrela',ListaParcial2,Solucao).
 
 %-----------------Imprime a sala-----------------------
@@ -352,10 +338,47 @@ imprime_solucao(Sala,Solucao,[XAntigo,YAntigo]):-
     nl,
     move_robo(Sala, [NovoXA, NovoYA], XAntigo,YAntigo, NovaSala),
     imprime_solucao(NovaSala,Resto,[NovoXA,NovoYA]).
+%-----------------------------Main------------------------------------
+reinicia_sujeiras():-
+    retractall(sujeira(_)),
+    retractall(objetivoP(_)),
+    encontrar_todas_sujeiras([Cabeca|Corpo]),
+    assertz(sujeira([Cabeca|Corpo])),
+    assertz(objetivoP(Cabeca)).
 
-    
-    
-    
+main(Linhas,Colunas,Obstaculos,SolucaoH,SolucaoBB,SolucaoBF,SolucaoA):-
+    inicia_sala(Linhas,Colunas,Obstaculos,Sala),
+    write(Sala),
+    reinicia_sujeiras(),
+    nl,
+    write('HillClimb : '),
+    nl,
+    busca('hillClimb',[[0,0]],SolucaoH),
+    reinicia_sujeiras(),
+    write('Branch and bound :'),
+    nl,
+    busca('branchAndBound',[0,[0,0]],SolucaoBB),
+    reinicia_sujeiras(),
+    write('Best First :'),
+    nl,
+    busca('bestFirst',[[0,0]],SolucaoBF),
+    reinicia_sujeiras(),
+    write('A*:'),
+    nl,
+    busca('aEstrela',[0,0,0,[0,0]],SolucaoA).
+
+teste(Solucao):-
+Sala =[[r,l,l],[s,o,l],[s,l,s]],
+
+
+    assertz(sala(Sala)),
+    assertz(objetivoF([2,2])),
+    reinicia_sujeiras(),
+    sala(Sala1),
+    write(Sala1),
+    sujeira(Sujeira),
+    write(Sujeira),
+    busca('branchAndBound',[0,[0,0]],Solucao).
 
     
 
