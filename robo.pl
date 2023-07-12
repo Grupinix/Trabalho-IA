@@ -49,23 +49,30 @@ preenche_sala([Cabeca | Corpo]) :-
     preenche_sala(Corpo).
 
 %-----------------------------Define objetivos------------------------
+distancia_sujeira([X,Y], Distancia) :-
+    objetivoP([XF,YF]),  
+    Distancia is abs(X - XF) + abs(Y - YF).
 
+compara_sujeira([], _, []).
+compara_sujeira([Cabeca|Corpo], Caminho, [Cabeca|Caminho2]):-
+    \+ member(Cabeca, Caminho),
+    compara_sujeira(Corpo, Caminho, Caminho2).
+compara_sujeira([_|Corpo], Caminho, Caminho2):-
+    compara_sujeira(Corpo, Caminho, Caminho2).
+    
 atualiza_sujeira([Cabeca|Corpo],Caminho) :-
-    not(member(Cabeca, Caminho)),
     retractall(sujeira(_)),
-    retractall(objetivoP(_)),
-    assertz(sujeira([Cabeca|Corpo])),
-    assertz(objetivoP(Cabeca)).
+    compara_sujeira([Cabeca|Corpo],Caminho,NovaSujeira),
+    atualiza_objetivo(NovaSujeira).
 
-atualiza_sujeira([_|Corpo],Caminho) :-
-    atualiza_sujeira(Corpo,Caminho).
-
-atualiza_sujeira([],_) :-
+atualiza_objetivo([]) :-
     retractall(sujeira(_)),
     retractall(objetivoP(_)),
     objetivoF(X),
     assertz(objetivoP(X)).
 
+atualiza_objetivo(NovaSujeira):-    
+    avaliacoes(NovaSujeira,_,10000000000000000,NovaSujeira).
   
 % Regra para encontrar todas as sujeiras em uma posição (X, Y) na matriz
 encontrar_sujeiras([X, Y]) :-
@@ -77,9 +84,24 @@ encontrar_sujeiras([X, Y]) :-
 encontrar_todas_sujeiras(TodasSujeiras) :-
     findall(([X, Y]), encontrar_sujeiras([X, Y]), TodasSujeiras).
 
+
+avaliacoes([],Menor,_,NovaSujeira):-
+    assertz(sujeira([Menor|NovaSujeira])),
+    retractall(objetivoP(_)),
+    assertz(objetivoP(Menor)).
+
+
+avaliacoes([Cabeca|Corpo],Menor,CustoMenor,NovaSujeira):-
+    distancia_sujeira(Cabeca,Distancia),
+    (   Distancia < CustoMenor ->  
+    NovoMenor = Cabeca,
+   	NovoCustoMenor = Distancia ;
+    
+    NovoMenor = Menor,
+    NovoCustoMenor = CustoMenor),
+    avaliacoes(Corpo,NovoMenor,NovoCustoMenor,NovaSujeira).
     
     
- 
 %----------------------------Mover-------------------------------------
 substituir_char(Sala, X, Y, NovaSala,Char) :-
     nth0(X, Sala, Linha), %Quero pegar a linha na posição X da Sala 
@@ -123,22 +145,33 @@ vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
 vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
 vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
-                
+
+
+
 estendeCusto([_,No|Caminho],NovosCaminhos) :-
 	findall([CustoNovo,NovoNo,No|Caminho],
 	(
     	vizinho(No,NovoNo),
-		distancia_custo(CustoNovo,[No|Caminho]),
-		not(member(NovoNo,[No|Caminho]))),
+        not(member(NovoNo,[No|Caminho])),
+		distancia_custo(CustoNovo,[No|Caminho])),
 		NovosCaminhos
 	).
+
+
+estendeCusto([_,No|Caminho],NovosCaminhos) :-
+	findall([CustoNovo,NovoNo,No|Caminho],
+	(
+    	vizinho(No,NovoNo),
+		distancia_custo(CustoNovo,[No|Caminho])),
+		NovosCaminhos
+	).
+
 
 estendeAvaliacao([_,No|Caminho],NovosCaminhos) :-
 	findall([ValorAvaliacao,NovoNo,No|Caminho],
 	(
     	vizinho(No,NovoNo),
 		distancia_manhattan(NovoNo,Avaliacao),
-		not(member(NovoNo,[No|Caminho])),
 		ValorAvaliacao is Avaliacao),
 		NovosCaminhos
 	).
@@ -148,7 +181,6 @@ estendeF([_,_,_,No|Caminho],NovosCaminhos):-
     (
     	vizinho(No,NovoNo),
         custo_avaliacao(CustoNovo,AvaliacaoNovo,[No|Caminho],NovoNo),
-        not(member(NovoNo,[No|Caminho])),
         FNovo is CustoNovo + AvaliacaoNovo),
     NovosCaminhos
    )
@@ -224,6 +256,7 @@ branchAndBound([Caminho|Caminhos], Solucao):-
                                                                                      %a ordenaçao usa a mesma informaçao do Best First
         branchAndBound(CaminhosOrd, Solucao).
 
+
 %------------------------- A* ---------------------------------------------------
 %F = custo + avaliacao
 aEstrela([[F,_,_,No|Caminho]|_],[F|Solucao]):-
@@ -280,6 +313,7 @@ busca('branchAndBound',Inicio,Solucao):-
     branchAndBound([Inicio],SolucaoParcial),
     SolucaoParcial = [_ | [Resto]],
     reverse(Resto,Solucao),
+    write(Solucao),
     sala(Sala),
     imprime_solucao(Sala,Solucao,[0,0]).
 
