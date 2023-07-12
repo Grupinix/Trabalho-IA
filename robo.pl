@@ -51,28 +51,51 @@ preenche_sala([Cabeca | Corpo]) :-
 %-----------------------------Define objetivos------------------------
 distancia_sujeira([X,Y], Distancia) :-
     objetivoP([XF,YF]),  
-    Distancia is abs(X - XF) + abs(Y - YF).
+    DiffX is abs(X - XF),
+    DiffY is abs(Y - YF),
+    Distancia is max(DiffX, DiffY).
 
-compara_sujeira([], _, []).
-compara_sujeira([Cabeca|Corpo], Caminho, [Cabeca|Caminho2]):-
-    \+ member(Cabeca, Caminho),
-    compara_sujeira(Corpo, Caminho, Caminho2).
-compara_sujeira([_|Corpo], Caminho, Caminho2):-
-    compara_sujeira(Corpo, Caminho, Caminho2).
-    
 atualiza_sujeira([Cabeca|Corpo],Caminho) :-
     retractall(sujeira(_)),
     compara_sujeira([Cabeca|Corpo],Caminho,NovaSujeira),
     atualiza_objetivo(NovaSujeira).
 
-atualiza_objetivo([]) :-
-    retractall(sujeira(_)),
+compara_sujeira([], _, []). %Caso base
+compara_sujeira([Cabeca|Corpo], Caminho, [Cabeca|Caminho2]):- %Se não for membro, continua sendo sujeira
+    \+ member(Cabeca, Caminho),
+    compara_sujeira(Corpo, Caminho, Caminho2).
+compara_sujeira([_|Corpo], Caminho, Caminho2):- %Ja passei por aqui, sou ignorado
+    compara_sujeira(Corpo, Caminho, Caminho2).
+
+atualiza_objetivo([]) :- %Sujeiras acabaram
     retractall(objetivoP(_)),
     objetivoF(X),
     assertz(objetivoP(X)).
 
-atualiza_objetivo(NovaSujeira):-    
+atualiza_objetivo(NovaSujeira):-    %Ainda tem , vamos achar a próxima sujeira
     avaliacoes(NovaSujeira,_,10000000000000000,NovaSujeira).
+
+avaliacoes([],Menor,_,NovaSujeira):- %Caso base
+    assertz(sujeira([Menor|NovaSujeira])), 
+    retractall(objetivoP(_)),
+    assertz(objetivoP(Menor)).
+
+
+avaliacoes([Cabeca|Corpo],Menor,CustoMenor,NovaSujeira):- %Comparação
+    distancia_sujeira(Cabeca,Distancia),
+    (   Distancia < CustoMenor ->  
+    NovoMenor = Cabeca,
+   	NovoCustoMenor = Distancia ;
+    
+    NovoMenor = Menor,
+    NovoCustoMenor = CustoMenor),
+    avaliacoes(Corpo,NovoMenor,NovoCustoMenor,NovaSujeira).
+
+
+
+    
+
+
   
 % Regra para encontrar todas as sujeiras em uma posição (X, Y) na matriz
 encontrar_sujeiras([X, Y]) :-
@@ -85,21 +108,6 @@ encontrar_todas_sujeiras(TodasSujeiras) :-
     findall(([X, Y]), encontrar_sujeiras([X, Y]), TodasSujeiras).
 
 
-avaliacoes([],Menor,_,NovaSujeira):-
-    assertz(sujeira([Menor|NovaSujeira])),
-    retractall(objetivoP(_)),
-    assertz(objetivoP(Menor)).
-
-
-avaliacoes([Cabeca|Corpo],Menor,CustoMenor,NovaSujeira):-
-    distancia_sujeira(Cabeca,Distancia),
-    (   Distancia < CustoMenor ->  
-    NovoMenor = Cabeca,
-   	NovoCustoMenor = Distancia ;
-    
-    NovoMenor = Menor,
-    NovoCustoMenor = CustoMenor),
-    avaliacoes(Corpo,NovoMenor,NovoCustoMenor,NovaSujeira).
     
     
 %----------------------------Mover-------------------------------------
@@ -137,14 +145,14 @@ move_robo(Sala, [X,Y], XAntigo,YAntigo, NovaSala):- %Direita
     imprime_sala(NovaSala).
 
 %----------------------------------- Algorítmos e Heurísticas----------------
+vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
+vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
+vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
+vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X+1, NovoY is Y+1, posicao_valida(NovoX, NovoY).
 vizinho([X, Y], [NovoX, NovoY]) :- NovoX is X-1, NovoY is Y-1, posicao_valida(NovoX, NovoY).
-vizinho([X, Y], [X, NovoY]) :- NovoY is Y+1, posicao_valida(X, NovoY).
-vizinho([X, Y], [X, NovoY]) :- NovoY is Y-1, posicao_valida(X, NovoY).
-vizinho([X, Y], [NovoX, Y]) :- NovoX is X+1, posicao_valida(NovoX, Y).
-vizinho([X, Y], [NovoX, Y]) :- NovoX is X-1, posicao_valida(NovoX, Y).
 
 
 
@@ -242,7 +250,7 @@ bestFirst([[_,No|Caminho]|_],Solucao, '-'):-
 bestFirst([Caminho|Caminhos], Solucao, Custo):-
 	estendeAvaliacao(Caminho, NovosCaminhos),
     concat(NovosCaminhos, Caminhos, CaminhosTotal),
-	ordena(CaminhosTotal, CaminhosOrd),
+    ordena(CaminhosTotal, CaminhosOrd),
 	bestFirst(CaminhosOrd, Solucao, Custo).
 
 %------------------ Busca Branch and Bound--------------------------------------
@@ -334,6 +342,7 @@ busca('aEstrela',Inicio,Solucao):-
     Caminho = [Custo|Caminhos],
     reverse(Caminhos,CaminhoPercorrido),  
     Solucao = [Custo| CaminhoPercorrido],
+    write(Solucao),
     sala(Sala),
     imprime_solucao(Sala,CaminhoPercorrido,[0,0]).
     
@@ -385,36 +394,49 @@ main(Linhas,Colunas,Obstaculos,SolucaoH,SolucaoBB,SolucaoBF,SolucaoA):-
     write(Sala),
     reinicia_sujeiras(),
     nl,
+
     write('HillClimb : '),
     nl,
-    busca('hillClimb',[[0,0]],SolucaoH),
-    reinicia_sujeiras(),
-    write('Branch and bound :'),
+    time(busca('hillClimb',[[0,0]],SolucaoH)),
     nl,
-    busca('branchAndBound',[0,[0,0]],SolucaoBB),
+    length(SolucaoH,TamanhoH),
+    write("Custo :"),
+    write(TamanhoH),
+    nl,
+    nl,
+
     reinicia_sujeiras(),
     write('Best First :'),
+    time(busca('bestFirst',[[0,0]],SolucaoBF)),
+    length(SolucaoBF,TamanhoBF),
     nl,
-    busca('bestFirst',[[0,0]],SolucaoBF),
+    write("Custo :"),
+    write(TamanhoBF),
+    nl,
+    nl,
+
+    reinicia_sujeiras(),
+    write('Branch and Bound :'),
+    time(busca('branchAndBound',[0,[0,0]],SolucaoBB)),
+    length(SolucaoBB,TamanhoBB),
+    nl,
+    write("Custo :"),
+    write(TamanhoBB),
+    nl,
+    nl,
+
+
     reinicia_sujeiras(),
     write('A*:'),
     nl,
-    busca('aEstrela',[0,0,0,[0,0]],SolucaoA).
-
-teste(Solucao):-
-Sala =[[r,l,l],[s,o,l],[s,l,s]],
-
-
-    assertz(sala(Sala)),
-    assertz(objetivoF([2,2])),
-    reinicia_sujeiras(),
-    sala(Sala1),
-    write(Sala1),
-    sujeira(Sujeira),
-    write(Sujeira),
-    busca('branchAndBound',[0,[0,0]],Solucao).
-
-    
+    time(busca('aEstrela',[0,0,0,[0,0]],SolucaoA)),
+    length(SolucaoA,TamanhoParcial),
+    nl,
+    write("Custo :"),
+    TamanhoA is TamanhoParcial -1,
+    write(TamanhoA),
+    nl,
+    nl.
 
 
 %inicia_sala(3,3,Sala,2),hillClimb([[_,[0,0]]],Solucao,Custo).
